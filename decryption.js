@@ -27,35 +27,43 @@ const crypto = require('crypto'); // Libreria de encriptacion
 const fs = require('fs');         // Libreria para manejo de archivos
 
 function decrypt({archivo}) {
+  return new Promise((resolve, reject) =>{
+    try {
+      //Genera stream de lectura
+      const strenVec = fs.createReadStream(archivo, { end: 15 });
 
-  //Genera stream de lectura
-  const strenVec = fs.createReadStream(archivo, { end: 15 });
+      let initVect;
+      //Toma el vector de inicio para la desencriptacion (los primero 16 caracteres)
+      strenVec.on('data', (chunk) => {
+        initVect = chunk;
+      });
 
-  let initVect;
-  //Toma el vector de inicio para la desencriptacion (los primero 16 caracteres)
-  strenVec.on('data', (chunk) => {
-    initVect = chunk;
-  });
+      strenVec.on('close', () => {
+        //Genera el desencriptador
+        const cipherKey = crypto.createHash('sha256').update(process.env.PKEY).digest();
 
-  strenVec.on('close', () => {
-    //Genera el desencriptador
-    const cipherKey = crypto.createHash('sha256').update(process.env.PKEY).digest();
+        //Lee el archivo de manera asincronica
+        //Apartir del caracter 16 que es despues de el vector de inicio
+        const streamLec = fs.createReadStream(archivo, { start: 16 });
 
-    //Lee el archivo de manera asincronica
-    //Apartir del caracter 16 que es despues de el vector de inicio
-    const streamLec = fs.createReadStream(archivo, { start: 16 });
+        //Crea el desencriptador de aes256 con la clave hash y el vector
+        const decipher = crypto.createDecipheriv('aes256', cipherKey, initVect);
 
-    //Crea el desencriptador de aes256 con la clave hash y el vector
-    const decipher = crypto.createDecipheriv('aes256', cipherKey, initVect);
+        //Genera el stream de escritura de manera asincronica
+        const streamEsc = fs.createWriteStream(archivo.slice(0, archivo.length-5) + '.inzeus');
 
-    //Genera el stream de escritura de manera asincronica
-    const streamEsc = fs.createWriteStream(archivo.slice(0, archivo.length-5) + '.inzeus');
+        //Ejecuta la secuencia asincronica
+        streamLec
+          .pipe(decipher)
+          .pipe(streamEsc);
 
-    //Ejecuta la secuencia asincronica
-    streamLec
-      .pipe(decipher)
-      .pipe(streamEsc);
-  });
+        streamLec.on('close', () => resolve());
+      });
+    } catch (e) {
+      console.log(e);
+      reject(e);
+    }
+  })
 }
 
 module.exports = decrypt;
