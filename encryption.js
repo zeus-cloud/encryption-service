@@ -30,6 +30,9 @@ const fs = require('fs');         // Libreria para manejo de archivos
 
 const {Transform} = require('stream'); //Clase de transformacion de stream asincronicos
 
+const ext = '.zeus'
+const output = './encrypted/'
+
 //Union de vector de inicio y stream de datos
 class UnionVectorInicio extends Transform {
   //Reconstrucion del constructor
@@ -50,7 +53,7 @@ class UnionVectorInicio extends Transform {
   }
 }
 
-function encrypt({archivo}) {
+function encrypt({lugar, archivo}) {
   return new Promise((resolve, reject) =>{
     try {
       //Vector inicio aleatorio
@@ -63,7 +66,7 @@ function encrypt({archivo}) {
       const ClavePrincipal = crypto.createHash('sha256').update(process.env.PKEY).digest();
 
       //Lectura del archivo asincronica
-      const streamLec = fs.createReadStream(archivo);
+      const streamLec = fs.createReadStream(lugar + archivo);
 
       //Cifrado del archivo
       const cipher = crypto.createCipheriv('aes256', ClavePrincipal, initVect);
@@ -72,20 +75,33 @@ function encrypt({archivo}) {
       const unionVec = new UnionVectorInicio(initVect);
 
       //Escritura del archivo asincronica a memoria
-      const streamEsc = fs.createWriteStream(archivo + ".zeus");
+      const streamEsc = fs.createWriteStream(output + archivo + ext);
 
       //Ejecucion del pipe de encriptacion asincronico
-      streamLec
-        .pipe(cipher)
-        .pipe(unionVec)
-        .pipe(streamEsc);
+      streamLec.on('error', () => {cleanupenc(output + archivo + ext); reject(1)})
+      .pipe(cipher)
+      .on('error', () => {cleanupenc(output + archivo + ext); reject(2)})
+      .pipe(unionVec)
+      .on('error', () => {cleanupenc(output + archivo + ext); reject(4)})
+      .pipe(streamEsc)
+      .on('error', () => {cleanupenc(output + archivo + ext); reject(3)});
 
-      streamLec.on('close', () => resolve());
+      streamLec.on('close', () =>{
+        cleanupenc(lugar + archivo)
+        resolve();
+      });
     }catch(e){
-      console.log(e);
       reject(e);
     }
   })
 };
+
+
+function cleanupenc(path){
+  try {
+    fs.unlinkSync(path);
+  } catch(err) {
+  }
+}
 
 module.exports = encrypt;

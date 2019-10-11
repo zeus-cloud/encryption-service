@@ -26,11 +26,16 @@ require('dotenv').config();       // Carga de archivo de configuracion
 const crypto = require('crypto'); // Libreria de encriptacion
 const fs = require('fs');         // Libreria para manejo de archivos
 
-function decrypt({archivo}) {
+const ext = '.zeus';
+const output = './output/';
+
+function decrypt({lugar, archivo}) {
   return new Promise((resolve, reject) =>{
     try {
       //Genera stream de lectura
-      const strenVec = fs.createReadStream(archivo, { end: 15 });
+      const strenVec = fs.createReadStream(lugar + archivo + ext, { end: 15 });
+
+      strenVec.on('error', () => reject(1));
 
       let initVect;
       //Toma el vector de inicio para la desencriptacion (los primero 16 caracteres)
@@ -44,26 +49,41 @@ function decrypt({archivo}) {
 
         //Lee el archivo de manera asincronica
         //Apartir del caracter 16 que es despues de el vector de inicio
-        const streamLec = fs.createReadStream(archivo, { start: 16 });
+        const streamLec = fs.createReadStream(lugar + archivo + ext, { start: 16 });
 
         //Crea el desencriptador de aes256 con la clave hash y el vector
         const decipher = crypto.createDecipheriv('aes256', cipherKey, initVect);
 
+        decipher.on('error', () => reject(4));
+
         //Genera el stream de escritura de manera asincronica
-        const streamEsc = fs.createWriteStream(archivo.slice(0, archivo.length-5) + '.inzeus');
+        const streamEsc = fs.createWriteStream(output + archivo);
 
         //Ejecuta la secuencia asincronica
-        streamLec
+        streamLec.on('error', () => {cleanupenc(output + archivo); reject(1)})
           .pipe(decipher)
-          .pipe(streamEsc);
+          .on('error', () => {cleanupenc(output + archivo); reject(2)})
+          .pipe(streamEsc)
+          .on('error', () => {cleanupenc(output + archivo); reject(3)});
 
-        streamLec.on('close', () => resolve());
+        streamLec.on('close', () =>{
+          cleanupenc(lugar + archivo + ext);
+          resolve();
+        });
       });
     } catch (e) {
       console.log(e);
       reject(e);
     }
   })
+}
+
+function cleanupenc(path){
+  try {
+    fs.unlinkSync(path);
+  } catch(err) {
+    console.error(err);
+  }
 }
 
 module.exports = decrypt;
