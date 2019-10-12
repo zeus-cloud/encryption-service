@@ -11,7 +11,12 @@ const app = express();
 app.use(bodyParser.json());
 
 app.post('/enc', (req, res) => {
-  encrypt({lugar: './input/', archivo: req.query.archivo}).then(
+  encrypt({
+            lugar: './input/',
+            archivo: req.query.archivo,
+            user: req.query.user,
+            time: req.query.time
+         }).then(
   () => res.send({procces:"done"}),
   (e) => {
     console.log("Encryption error nr: " + e);
@@ -20,7 +25,12 @@ app.post('/enc', (req, res) => {
 });
 
 app.post('/des', (req, res) => {
-  decrypt({lugar: './encrypted/', archivo: req.query.archivo}).then(
+  decrypt({
+            lugar: './encrypted/',
+            archivo: req.query.archivo,
+            user: req.query.user,
+            time: req.query.time
+          }).then(
   () => res.send({procces:"done"}),
   (e) => {
     console.log("Decryption error nr: " + e);

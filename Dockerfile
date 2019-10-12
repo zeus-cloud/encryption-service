@@ -1,6 +1,8 @@
 FROM node:10
 
-WORKDIR /usr/src/app
+WORKDIR /
+
+COPY package.json ./
 
 RUN npm install
 
