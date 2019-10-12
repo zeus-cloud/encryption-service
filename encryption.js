@@ -63,7 +63,7 @@ function encrypt({lugar, archivo}) {
 
       //Clave principal del cifrado
       //La clave la transforma en un hash de 32 de largo univoco para usar como contraseña del aes
-      const ClavePrincipal = crypto.createHash('sha256').update(process.env.PKEY).digest();
+      const ClavePrincipal = crypto.createHash('sha256').update(process.env.PKEY || '1234567890').digest();
 
       //Lectura del archivo asincronica
       const streamLec = fs.createReadStream(lugar + archivo);

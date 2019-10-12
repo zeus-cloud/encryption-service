@@ -45,7 +45,7 @@ function decrypt({lugar, archivo}) {
 
       strenVec.on('close', () => {
         //Genera el desencriptador
-        const cipherKey = crypto.createHash('sha256').update(process.env.PKEY).digest();
+        const cipherKey = crypto.createHash('sha256').update(process.env.PKEY || '1234567890').digest();
 
         //Lee el archivo de manera asincronica
         //Apartir del caracter 16 que es despues de el vector de inicio
