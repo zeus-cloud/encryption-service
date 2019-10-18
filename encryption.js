@@ -29,6 +29,7 @@ const crypto = require('crypto'); // Libreria de encriptacion
 const fs = require('fs');         // Libreria para manejo de archivos
 
 const {Transform} = require('stream'); //Clase de transformacion de stream asincronicos
+var Request = require("request");
 
 const ext = '.zeus'
 const output = './encrypted/'
@@ -65,43 +66,36 @@ function encrypt({lugar, archivo}) {
       //La clave la transforma en un hash de 32 de largo univoco para usar como contraseña del aes
       const ClavePrincipal = crypto.createHash('sha256').update(process.env.PKEY || '1234567890').digest();
 
-      //Lectura del archivo asincronica
-      const streamLec = fs.createReadStream(lugar + archivo);
-
       //Cifrado del archivo
       const cipher = crypto.createCipheriv('aes256', ClavePrincipal, initVect);
 
       //Union con vector de inicio
       const unionVec = new UnionVectorInicio(initVect);
 
-      //Escritura del archivo asincronica a memoria
-      const streamEsc = fs.createWriteStream(output + archivo + ext);
-
+      console.log(lugar);
       //Ejecucion del pipe de encriptacion asincronico
-      streamLec.on('error', () => {cleanupenc(output + archivo + ext); reject(1)})
-      .pipe(cipher)
-      .on('error', () => {cleanupenc(output + archivo + ext); reject(2)})
-      .pipe(unionVec)
-      .on('error', () => {cleanupenc(output + archivo + ext); reject(4)})
-      .pipe(streamEsc)
-      .on('error', () => {cleanupenc(output + archivo + ext); reject(3)});
+      lugar.pipe(cipher).pipe(unionVec);
 
-      streamLec.on('close', () =>{
-        cleanupenc(lugar + archivo)
-        resolve();
-      });
+      var bufs = [];
+
+      unionVec.on('data', function(d){ bufs.push(d); });
+      unionVec.on('end', function(){var buf = Buffer.concat(bufs);sendfile({originalname: archivo, buffer: buf});});
+
     }catch(e){
       reject(e);
     }
   })
 };
 
-
-function cleanupenc(path){
-  try {
-    fs.unlinkSync(path);
-  } catch(err) {
-  }
+function sendfile(file){
+  Request.post('http://10.10.3.169:8082/save', {json: file},
+    (error, res, body) => {
+      if (error) {
+        console.error(error)
+        return
+      }
+      console.log("ok");
+  })
 }
 
 module.exports = encrypt;
