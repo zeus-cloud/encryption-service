@@ -15,75 +15,60 @@
   }
 
   archivo: string de locacion del archivo (absoluta o relativa sobre la ubicacion del servicio)
-
-  TODO:
-    - Manejo de errores
-
 */
 
 require('dotenv').config();       // Carga de archivo de configuracion
 
-const crypto = require('crypto'); // Libreria de encriptacion
 const fs = require('fs');         // Libreria para manejo de archivos
+const { Readable } = require('stream');
 
-const ext = '.zeus';
-const output = './output/';
+const crypto = require('crypto'); // Libreria de encriptacion
+const {Transform} = require('stream'); //Clase de transformacion de stream asincronicos
+var Request = require("request-promise-native");
 
-function decrypt({lugar, archivo}) {
+function decrypt({archivo}) {
   return new Promise((resolve, reject) =>{
     try {
-      //Genera stream de lectura
-      const strenVec = fs.createReadStream(lugar + archivo + ext, { end: 15 });
+      ask4file(archivo).then((a) => {
 
-      strenVec.on('error', () => reject(1));
-
-      let initVect;
-      //Toma el vector de inicio para la desencriptacion (los primero 16 caracteres)
-      strenVec.on('data', (chunk) => {
-        initVect = chunk;
-      });
-
-      strenVec.on('close', () => {
-        //Genera el desencriptador
+        var archivo = JSON.parse(a);
+        //Genera stream de lectura
+        const file = bufferToStream(Buffer.from(archivo.buffer));
+        //Preparar la clave primaria
         const cipherKey = crypto.createHash('sha256').update(process.env.PKEY || '1234567890').digest();
-
-        //Lee el archivo de manera asincronica
-        //Apartir del caracter 16 que es despues de el vector de inicio
-        const streamLec = fs.createReadStream(lugar + archivo + ext, { start: 16 });
-
         //Crea el desencriptador de aes256 con la clave hash y el vector
-        const decipher = crypto.createDecipheriv('aes256', cipherKey, initVect);
-
-        decipher.on('error', () => reject(4));
-
-        //Genera el stream de escritura de manera asincronica
-        const streamEsc = fs.createWriteStream(output + archivo);
-
+        const decipher = crypto.createDecipher('aes256', cipherKey);
         //Ejecuta la secuencia asincronica
-        streamLec.on('error', () => {cleanupenc(output + archivo); reject(1)})
-          .pipe(decipher)
-          .on('error', () => {cleanupenc(output + archivo); reject(2)})
-          .pipe(streamEsc)
-          .on('error', () => {cleanupenc(output + archivo); reject(3)});
-
-        streamLec.on('close', () =>{
-          cleanupenc(lugar + archivo + ext);
-          resolve();
-        });
+        file.pipe(decipher);
+        //Stream a buffer
+        var bufs = [];
+        decipher.on('data', function(d){ bufs.push(d); });
+        decipher.on('end', function(){var buf = Buffer.concat(bufs);resolve({archivo: archivo.archivo, buffer: buf});});
       });
     } catch (e) {
-      console.log(e);
-      reject(e);
+      reject({tiago:"Nos re vimo"});
     }
   })
 }
 
-function cleanupenc(path){
-  try {
-    fs.unlinkSync(path);
-  } catch(err) {
-    console.error(err);
-  }
+async function ask4file(file){
+  return await Request.get('http://localhost:8082/get/?archivo='+file,
+    (error, res, body) => {
+      if (error) {
+        console.error(error);
+      }
+      return res.body
+    })
+}
+
+function bufferToStream(binary) {
+  const readableInstanceStream = new Readable({
+    read() {
+      this.push(binary);
+      this.push(null);
+    }
+  });
+  return readableInstanceStream;
 }
 
 module.exports = decrypt;

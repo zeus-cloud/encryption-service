@@ -12,26 +12,28 @@ const app = express();
 
 app.use(bodyParser.json());
 
+console.log(process.env.PKEY || "No se encuentra .env");
+
 app.post('/enc', (req, res) => {
   encrypt({
             lugar: bufferToStream(Buffer.from(req.body.buffer)),
             archivo: req.body.originalname,
          }).then(
-  () => res.send({procces:"done"}),
+  () => {
+    res.send({procces:"done"});
+    console.log("Archivo encriptado: " + req.body.originalname);},
   (e) => {
     console.log("Encryption error nr: " + e);
     res.status(404).send('File not found error encryption nr: ' + e);
   });
 });
 
-app.post('/des', (req, res) => {
-  decrypt({
-            lugar: './encrypted/',
-            archivo: req.query.archivo,
-            user: req.query.user,
-            time: req.query.time
-          }).then(
-  () => res.send({procces:"done"}),
+app.get('/des/**', (req, res) => {
+  decrypt({archivo: req.query.archivo}).then(
+  (body) => {
+    console.log("Archivo desencriptado: " + body.archivo);
+    res.send(body);
+  },
   (e) => {
     console.log("Decryption error nr: " + e);
     res.status(404).send('File not found error decryption nr: ' + e);

@@ -31,8 +31,7 @@ const fs = require('fs');         // Libreria para manejo de archivos
 const {Transform} = require('stream'); //Clase de transformacion de stream asincronicos
 var Request = require("request");
 
-const ext = '.zeus'
-const output = './encrypted/'
+const ext = '.zeus';
 
 //Union de vector de inicio y stream de datos
 class UnionVectorInicio extends Transform {
@@ -57,30 +56,17 @@ class UnionVectorInicio extends Transform {
 function encrypt({lugar, archivo}) {
   return new Promise((resolve, reject) =>{
     try {
-      //Vector inicio aleatorio
-      //La mitad de longitud de la contraseña del algoritmo
-      //Para no repetir la salida si se genera un archivo de igual condicion con la misma contraseña
-      const initVect = crypto.randomBytes(16);
-
       //Clave principal del cifrado
       //La clave la transforma en un hash de 32 de largo univoco para usar como contraseña del aes
       const ClavePrincipal = crypto.createHash('sha256').update(process.env.PKEY || '1234567890').digest();
-
       //Cifrado del archivo
-      const cipher = crypto.createCipheriv('aes256', ClavePrincipal, initVect);
-
-      //Union con vector de inicio
-      const unionVec = new UnionVectorInicio(initVect);
-
-      console.log(lugar);
+      const cipher = crypto.createCipher('aes256', ClavePrincipal);
       //Ejecucion del pipe de encriptacion asincronico
-      lugar.pipe(cipher).pipe(unionVec);
-
+      lugar.pipe(cipher);
+      //Strem a buffer
       var bufs = [];
-
-      unionVec.on('data', function(d){ bufs.push(d); });
-      unionVec.on('end', function(){var buf = Buffer.concat(bufs);sendfile({originalname: archivo, buffer: buf});});
-
+      cipher.on('data', function(d){ bufs.push(d); });
+      cipher.on('end', function(){var buf = Buffer.concat(bufs);sendfile({originalname: archivo + ext, buffer: buf});resolve();});
     }catch(e){
       reject(e);
     }
@@ -88,7 +74,7 @@ function encrypt({lugar, archivo}) {
 };
 
 function sendfile(file){
-  Request.post('http://10.10.3.169:8082/save', {json: file},
+  Request.post('http://localhost:8082/save', {json: file},
     (error, res, body) => {
       if (error) {
         console.error(error)
