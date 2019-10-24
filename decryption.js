@@ -52,7 +52,7 @@ function decrypt({archivo}) {
 }
 
 async function ask4file(file){
-  return await Request.get('http://localhost:8082/get/?archivo='+file,
+  return await Request.get('http://localhost:8082/file/?archivo='+file,
     (error, res, body) => {
       if (error) {
         console.error(error);

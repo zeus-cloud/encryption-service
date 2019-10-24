@@ -24,11 +24,11 @@ app.post('/enc', (req, res) => {
     console.log("Archivo encriptado: " + req.body.originalname);},
   (e) => {
     console.log("Encryption error nr: " + e);
-    res.status(404).send('File not found error encryption nr: ' + e);
+    res.status(404).send({procces: 'File not found error encryption nr: ' + e});
   });
 });
 
-app.get('/des/**', (req, res) => {
+app.get('/enc/**', (req, res) => {
   decrypt({archivo: req.query.archivo}).then(
   (body) => {
     console.log("Archivo desencriptado: " + body.archivo);
