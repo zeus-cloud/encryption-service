@@ -36,7 +36,7 @@ app.get('/enc/**', (req, res) => {
   },
   (e) => {
     console.log("Decryption error nr: " + e);
-    res.status(404).send('File not found error decryption nr: ' + e);
+    res.status(404).send('Error triggered: ' + e);
   });
 });
 
