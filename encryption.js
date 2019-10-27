@@ -74,7 +74,7 @@ function encrypt({lugar, archivo}) {
 };
 
 function sendfile(file){
-  Request.post('http://'+env.process.FS_IP+':'+env.process.FS_PORT+'/file', {json: file},
+  Request.post('http://'+process.env.FS_IP+':'+process.env.FS_PORT+'/file', {json: file},
     (error, res, body) => {
       if (error) {
         console.error(error)

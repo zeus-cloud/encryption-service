@@ -10,7 +10,8 @@ const { Readable } = require('stream');
 const port = 8083;
 const app = express();
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '50mb', extended: true}))
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
 
 console.log(process.env.PKEY || "No se encuentra .env");
 

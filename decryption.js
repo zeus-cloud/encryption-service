@@ -52,7 +52,7 @@ function decrypt({archivo}) {
 }
 
 async function ask4file(file){
-  return await Request.get('http://'+env.process.FS_IP+':'+env.process.FS_PORT+'/file/?archivo='+file,
+  return await Request.get('http://'+process.env.FS_IP+':'+process.env.FS_PORT+'/file/?archivo='+file,
     (error, res, body) => {
       if (error) {
         console.error(error);
